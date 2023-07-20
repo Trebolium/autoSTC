@@ -1,0 +1,5 @@
+fft_size: 1024
+fmin: 90
+hop_size: 256
+n_mels: 80
+sr: 16000
