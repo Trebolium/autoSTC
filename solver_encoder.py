@@ -1,17 +1,18 @@
 from model_vc import Generator
 from synthesis.model_bl import D_VECTOR
-from vte_model import Vt_Embedder
 from collections import OrderedDict
+import sys
+sys.path.insert(1, '/homes/bdoc3/my_data/autovc_models/')
+from architectures.classifiers.vte import SingingTechniqueClassifier_2Fclayer as Vt_Embedder
 from torch.utils.tensorboard import SummaryWriter
 import torch
-import math, os, pickle, sys
-import utils
-from scipy.signal import medfilt
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import time, pdb
 import datetime
+import pickle
 
 def save_ckpt(model, model_optimizer, loss, iteration, save_path):
     print('Saving model...')
@@ -46,6 +47,8 @@ class Solver(object):
     def __init__(self, data_loader, config, spmel_params):
         """Initialize configurations.""" 
         self.config = config
+        self.config.is_lstm = True
+        self.config.lstm_num = 2
 
         if self.config.file_name == 'defaultName' or self.config.file_name == 'deletable':
             self.writer = SummaryWriter('testRuns/test')
@@ -71,7 +74,9 @@ class Solver(object):
     def build_model(self):
 
         if self.config.which_embs == 'vt-live' or self.config.which_embs == 'vt-avg':
-            self.vte =  Vt_Embedder(self.config, self.spmel_params)
+
+            saved_config = pickle.load(open(os.path.join(self.config.ste_path, 'config_params.pkl'), 'rb'))
+            self.vte =  Vt_Embedder(saved_config, self.spmel_params)
             for param in self.vte.parameters():
                 param.requires_grad = False
             self.vte_optimizer = torch.optim.Adam(self.vte.parameters(), 0.0001)
@@ -88,7 +93,9 @@ class Solver(object):
                         state[k] = v.cuda(self.device)
             self.vte.to(self.device)
             self.vte.eval()
-            self.avg_vt_embs = np.load(os.path.join(self.config.ste_path, 'averaged_embs.npy'))
+            if self.config.saved_embs_path == '':
+                self.config.saved_embs_path = self.config.ste_path
+            self.avg_vt_embs = pickle.load(open(os.path.join(self.config.saved_embs_path, 'avg_style_embs.pkl'), 'rb'))
             
         elif self.config.which_embs == 'spkrid-live':
             # C is the speaker encoder. The config values match with the paper
@@ -162,8 +169,7 @@ class Solver(object):
 
                 # DESIGNED ONLY FOR VCTK TESTS
                 if self.config.which_embs == 'vt-live':
-                    pred_style_idx, all_tensors = self.vte(x_real_chunked)
-                    emb_org = all_tensors[-1]
+                    pred_style_idx, emb_org = self.vte(x_real_chunked)
 #                elif self.config.which_embs == 'vt-avg':
 #                    pred_output, all_tensors = self.vte(x_real_chunked)
 #                    _, style_idx = torch.max(pred_output,1)

@@ -2,6 +2,8 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 import numpy as np
 import os, pdb, pickle, random, math
+
+from my_os import recursive_file_retrieval
        
 from multiprocessing import Process, Manager   
 
@@ -85,15 +87,18 @@ class PathSpecDataset(Dataset):
 #            for excluded_singer_id in config.exclude_list:
 #                idx = singer_names.index(excluded_singer_id)
 #                singer_names[idx] = 'removed'
-        dir_name, _, fileList = next(os.walk('/homes/bdoc3/my_data/phonDet/spmel_autovc_params_normalized')) #this has changed from unnormalised to normed
+        # dir_name, _, fileList = next(os.walk('/homes/bdoc3/my_data/phonDet/spmel_autovc_params_normalized')) #this has changed from unnormalised to normed
+        dir_name, _, fileList = next(os.walk(config.spmel_dir)) #this has changed from unnormalised to normed
+        _, fileList = recursive_file_retrieval(config.spmel_dir, return_parent=False)
         fileList = sorted(fileList)
         dataset = []
         # group dataset by singers
         for singer_idx, singer_name in enumerate(singer_names):
             singer_examples = []
-            for file_name in fileList:
+            for file_path in fileList:
+                file_name = os.path.basename(file_path)
                 if file_name.startswith(singer_name) and file_name.endswith('.npy'):
-                    spmel = np.load(os.path.join(dir_name, file_name))
+                    spmel = np.load(file_path)
                     for style_idx, style_name in enumerate(style_names):
                         if style_name in file_name:
                             singer_examples.append((spmel, singer_idx, os.path.basename(file_name[:-4])))

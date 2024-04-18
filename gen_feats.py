@@ -1,5 +1,7 @@
-import os, pdb, time, shutil, crepe, librosa, pickle, random
+import os, time, shutil, librosa
 import numpy as np
+import argparse
+import pdb
 import soundfile as sf
 from scipy import signal
 from scipy.signal import get_window, medfilt
@@ -55,19 +57,30 @@ def pitch_preprocessing(frequency_prediction, confidence):
     one_hot_preprocessed_pitch_conotours = np.zeros((vector_257_vuv_normalized_unit_var_log_freq.size, vector_257_vuv_normalized_unit_var_log_freq.max()+1))
     one_hot_preprocessed_pitch_conotours[np.arange(vector_257_vuv_normalized_unit_var_log_freq.size),vector_257_vuv_normalized_unit_var_log_freq] = 1
     return one_hot_preprocessed_pitch_conotours 
- 
+
+
+parser = argparse.ArgumentParser(description="Example of argparse usage")
+
+# Add the command-line arguments
+parser.add_argument("--sdp", type=str, default='spmel', help="Path to spectrogram directory")
+parser.add_argument("--pdp", type=str, default='pitch', help="Path to pitch directory")
+parser.add_argument("--adp", type=str, default='audio', help="Path to audio directory")
+parser.add_argument("--ext", type=str, default='wav', help="Extension of audio files")
+
+# Parse the command-line arguments
+config = parser.parse_args()
+
 mel_basis = mel(16000, 1024, fmin=90, fmax=7600, n_mels=80).T
 min_level = np.exp(-100 / 20 * np.log(10))
 b, a = butter_highpass(30, 16000, order=5)
 
-
 # audio file directory
 #rootDir = '/import/c4dm-datasets/VCTK-Corpus-0.92/wav48_silence_trimmed'
-rootDir = '/homes/bdoc3/vte-autovc/Bounces'
+rootDir = config.adp
 # spectrogram directory
-targetDirSpec = './spmel'
+targetDirSpec = config.sdp
 # pitch contour directory
-targetDirPitch = './pitch'
+targetDirPitch = config.pdp
 
 print('Deleting old directories...')
 for directory in [targetDirSpec, targetDirPitch]:
@@ -84,12 +97,13 @@ for subdir_idx, subdir in enumerate(sorted(subdirList)):
     os.makedirs(os.path.join(targetDirSpec,subdir))
     os.makedirs(os.path.join(targetDirPitch,subdir))
     _,_, fileList = next(os.walk(os.path.join(dirName,subdir)))
+    # pdb.set_trace()
     #prng = RandomState(int(subdir[1:])) 
     prng = RandomState(1) 
 
     for file_idx, fileName in enumerate(sorted(fileList)):
         # ensure that only mic1 files are processed
-        if fileName.endswith('wav'):
+        if fileName.endswith(config.ext):
             print(f'{subdir}, {subdir_idx}/{len(subdirList)}, {fileName}, {file_idx}/{len(fileList)}')
             # Read audio file
             audio, sr = sf.read(os.path.join(dirName,subdir,fileName))
@@ -110,13 +124,10 @@ for subdir_idx, subdir in enumerate(sorted(subdirList)):
             D_mel = np.dot(D, mel_basis)
             #Author mentioned min level -100 and ref level 16 dB in https://github.com/auspicious3000/autovc/issues/4
             D_db = 20 * np.log10(np.maximum(min_level, D_mel)) - 16
+            pdb.set_trace()
             S = np.clip((D_db + 100) / 100, 0, 1)    
             # save spect    
             np.save(os.path.join(targetDirSpec, subdir, fileName[:-5]),
                     S.astype(np.float32), allow_pickle=False)    
-            # save pitch contour
-#            np.save(os.path.join(targetDirPitch, subdir, fileName[:-5]),
-#                    one_hot_preprocessed_pitch_conotours.astype(np.float32), allow_pickle=False)
-            # pdb.set_trace()
 
 print('time taken', time.time()-start_time)

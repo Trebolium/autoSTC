@@ -86,7 +86,6 @@ class Encoder(nn.Module):
         # c_org is speaker embedding
     def forward(self, x, c_org):
         x = x.squeeze(1).transpose(2,1)
-        #pdb.set_trace()
         # broadcasts c_org to a compatible shape to merge with x
         c_org = c_org.unsqueeze(-1).expand(-1, -1, x.size(-1))
         x = torch.cat((x, c_org), dim=1)
@@ -100,11 +99,10 @@ class Encoder(nn.Module):
         outputs, _ = self.lstm(x)
         saved_enc_outs.append(outputs.transpose(2,1)) ### 
         # backward is the first half of dimensions, forward is the second half
-        # pdb.set_trace()
         out_forward = outputs[:, :, :self.dim_neck]
         out_backward = outputs[:, :, self.dim_neck:]
 
-        # pdb.set_trace()
+        pdb.set_trace()
         codes = []
         # for each timestep, skipping self.freq frames
         for i in range(0, outputs.size(1), self.freq):
@@ -141,6 +139,7 @@ class Decoder(nn.Module):
     def forward(self, x):
 
         #self.lstm1.flatten_parameters()
+        # pdb.set_trace()
         saved_dec_outs = [x.transpose(1,2)] ###
         x, _ = self.lstm1(x)
         saved_dec_outs.append(x.transpose(1,2)) ###
@@ -196,6 +195,7 @@ class Postnet(nn.Module):
             )
 
     def forward(self, x):
+        # pdb.set_trace()
         for i in range(len(self.convolutions) - 1):
             x = torch.tanh(self.convolutions[i](x))
 
@@ -227,6 +227,7 @@ class Generator(nn.Module):
             # reformatting tmp from list to tensor, and resample it at the specified freq
             tmp.append(code.unsqueeze(1).expand(-1,int(x.size(1)/len(codes)),-1))
         code_exp = torch.cat(tmp, dim=1)
+        pdb.set_trace()
         # concat reformated encoder output with target speaker embedding
         encoder_outputs = torch.cat((code_exp, c_trg.unsqueeze(1).expand(-1,x.size(1),-1)), dim=-1)
         mel_outputs, saved_dec_outs = self.decoder(encoder_outputs)

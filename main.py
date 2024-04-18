@@ -1,4 +1,12 @@
-import os, pdb, pickle, random, argparse, shutil, yaml
+import os
+import pdb
+import pickle
+import random
+import argparse
+import shutil
+import yaml
+import sys
+sys.path.insert(1, '/homes/bdoc3/my_utils')
 from solver_encoder import Solver
 #from solver_encoder_singerid_embs import Solver
 from data_loader import VctkFromMeta, PathSpecDataset, SpecChunksFromPkl
@@ -136,7 +144,7 @@ def main(config):
     # all_idxs = [i for i in range(20)] # assumes dataset is in the order of singer_names as seen above
     cudnn.benchmark = True # For fast training.
     random.seed(1)
-    with open('/homes/bdoc3/my_data/spmel_data/vocalSet_subset_unnormed/spmel_params.yaml') as File:
+    with open(os.path.join(config.spmel_dir, 'feat_params.yaml')) as File:
         spmel_params = yaml.load(File, Loader=yaml.FullLoader)
     ste_dir_config_path = config.ste_path +'/config_params.pkl'
     vte_dir_config = pickle.load(open(ste_dir_config_path,'rb'))
@@ -173,8 +181,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # dirs and files
     parser.add_argument('--file_name', type=str, default='defaultName')
-    parser.add_argument('--data_dir', type=str, default='/homes/bdoc3/my_data/autovc_data/autoStc', help='path to config file to use')
-    parser.add_argument('--spmel_dir', type=str, default='/homes/bdoc3/my_data/phonDet/spmel_autovc_params_unnormalized')
+    parser.add_argument('--models_dir', type=str, default='/homes/bdoc3/my_data/autovc_data/autoStc', help='path to config file to use')
+    parser.add_argument('--spmel_dir', type=str, default='/homes/bdoc3/my_data/spmel_data/vocalset/vocalSet_subset_unnormed')
     parser.add_argument('--ckpt_weights', type=str, default='', help='path to the ckpt model want to use')
     # model inits
     parser.add_argument('--which_cuda', type=int, default=0, help='Determine which cuda driver to use')
@@ -185,6 +193,7 @@ if __name__ == '__main__':
     parser.add_argument('--dim_emb', type=int, default=256)
     parser.add_argument('--dim_pre', type=int, default=512)
     parser.add_argument('--freq', type=int, default=16)
+    parser.add_argument('--dropout', type=float, default=0., metavar='N', help='amount of dropout')
     # dataset params
     parser.add_argument('--use_loader', type=str, default='vocal', help='take singer ids to exclude from the VTEs config.test_list')
     parser.add_argument('--chunk_seconds', type=float, default=0.5, help='dataloader output sequence length')
@@ -200,6 +209,7 @@ if __name__ == '__main__':
     parser.add_argument('--prnt_loss_weight', type=float, default=1.0, help='Determine weight applied to pre-net reconstruction loss')
     # Scheduler parameters
     parser.add_argument('--patience', type=float, default=30, help='Determine weight applied to pre-net reconstruction loss')
+    parser.add_argument('--saved_embs_path', type=str, default='', help='toggle checkpoint load function')
     parser.add_argument('--ste_path', type=str, default='/homes/bdoc3/phonDet/results/newStandardAutovcSpmelParamsUnnormLatent64Out256', help='toggle checkpoint load function')
     parser.add_argument('--ckpt_freq', type=int, default=50000, help='frequency in steps to mark checkpoints')
     parser.add_argument('--spec_freq', type=int, default=10000, help='frequency in steps to print reconstruction illustrations')
